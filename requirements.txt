@@ -28,7 +28,7 @@ executing==2.0.1
 frozenlist==1.4.1
 fsspec==2024.3.1
 gremlinpython==3.7.1
-idna==3.6
+idna==3.7
 importlib_metadata==7.1.0
 iniconfig==2.0.0
 ipykernel==6.29.4
