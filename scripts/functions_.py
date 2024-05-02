@@ -39,7 +39,7 @@ def extract_data_to_s3():
                 wr.s3.upload(file_path, s3_file_path)
                 logging.info(f"Uploading {file} to {s3_path}")
     logging.info("Extraction complete")
-    print("Extraction complete")
+    print("Source data extraction from Repo to landing folder complete")
 
 
 
@@ -61,6 +61,7 @@ def load_data_from_s3(partitions: Optional[Dict[str, str]] = None):
             )  # , use_legacy_dataset=False
             dfs.append(df_frag)
     full_df = pd.concat(dfs, ignore_index=True)
+    print("Loading data from landing bucket ...")
     return full_df
 
 
@@ -136,6 +137,7 @@ def add_mojap_columns_to_dataframe(df):
     df["mojap_task_timestamp"] = pd.to_datetime(
         settings.MOJAP_EXTRACTION_TS, unit='s'
     )
+    print("Transforming data ...")
     return df
 
 
@@ -189,7 +191,7 @@ def write_curated_table_to_s3(df: pd.DataFrame):
     logging.info("Table '%s' created (or overwritten) in database '%s'", db_dict["table_name"], db_dict["name"])
 
     logging.info("Writing Data to Table '%s' in database '%s'", db_dict["table_name"], db_dict["name"])
-    print(("Curation complete"))
+    print(("Data successfully written to s3 bucket and Athena Table created"))
 
 
 
@@ -225,6 +227,7 @@ def move_completed_files_to_raw_hist():
         logging.error("Failed to delete files: %s", error)
     except Exception as e:
         logging.error("An unexpected error occurred: %s", e)
+    print(("Raw data moved from Landing folder - Raw History"))
 
 
 def apply_scd2():
