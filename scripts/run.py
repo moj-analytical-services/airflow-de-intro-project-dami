@@ -1,4 +1,4 @@
-from .functions_ import *
+from scripts.functions_ import *
 
 def run_data_pipeline():
     extract_data_to_s3()
