@@ -19,8 +19,8 @@ from arrow_pd_parser import reader, writer
 
 from typing import Dict, Union, Optional, Tuple
 
-from .config import settings
-from .utils import s3_path_join
+from scripts.config import settings
+from scripts.utils import s3_path_join
 from dataengineeringutils3.s3 import get_filepaths_from_s3_folder
 
 # Set up logging

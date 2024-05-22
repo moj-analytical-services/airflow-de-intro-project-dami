@@ -8,7 +8,7 @@ from pydantic_settings import BaseSettings
 
 import re
 
-LOCAL_DEV_MODE = True
+LOCAL_DEV_MODE = False #True
 DEFAULT_SECRET_PREFIX = "/alpha/airflow/airflow_prod_laa/"
 
 
@@ -18,19 +18,17 @@ class Settings(BaseSettings):
     there is no env var with that name set, applies the default value. If
     not set and no default value specified, throws an error (these are not
     optional and are required to be set via the DAG)"""
-    AWS_REGION: str = "eu-west-2"
+    
+    AWS_REGION: str = "eu-west-1"
     MOJAP_EXTRACTION_TS: int
     MOJAP_IMAGE_VERSION: str
     TABLE_PREFIX: Optional[str] = None
-    TABLES: Optional[str] = None #ßOptional[Union[str, List[str]]] = None
+    TABLES: str = None 
 
     LANDING_FOLDER: Optional[str] = None
     RAW_HIST_FOLDER: Optional[str] = None
     CURATED_FOLDER: Optional[str] = None
     METADATA_FOLDER: Optional[str] = None
-    # Name of the secret in the AWS Parameter Store
-    SECRET_NAME_USER: str = f"{DEFAULT_SECRET_PREFIX}user-name"
-    SECRET_NAME_PASSWORD: str = f"{DEFAULT_SECRET_PREFIX}password"
 
     @model_validator(mode="before")
     def check_land_and_or_meta(cls, values):
@@ -44,16 +42,16 @@ class Settings(BaseSettings):
             )
         return values
 
-    # @model_validator(mode="before")
-    # def check_prefix_or_tables(cls, values):
-    #     """One and only one of TABLE_PREFIX and TABLES must be set"""
-    #     if (values.get("TABLE_PREFIX") is None) and (values.get("TABLES") is None):
-    #         raise ValueError("One of TABLE_PREFIX or TABLES is required")
-    #     if (values.get("TABLE_PREFIX") is not None) and (
-    #         values.get("TABLES") is not None
-    #     ):
-    #         raise ValueError("One and only one of TABLE_PREFIX and TABLES must be set")
-    #     return values
+    @model_validator(mode="before")
+    def check_prefix_or_tables(cls, values):
+        """One and only one of TABLE_PREFIX and TABLES must be set"""
+        if (values.get("TABLE_PREFIX") is None) and (values.get("TABLES") is None):
+            raise ValueError("One of TABLE_PREFIX or TABLES is required")
+        if (values.get("TABLE_PREFIX") is not None) and (
+            values.get("TABLES") is not None
+        ):
+            raise ValueError("One and only one of TABLE_PREFIX and TABLES must be set")
+        return values
 
     @classmethod
     def string_match(cls, strg: str,
