@@ -1,23 +1,17 @@
-"""Parses and performs initial validation of the settings based on
-environment variables (in production these are set via the Airflow DAG)"""
 import os
+import re
 from typing import List, Optional, Union
 
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings
 
-import re
 
-LOCAL_DEV_MODE = False #True
+
+LOCAL_DEV_MODE = True
 DEFAULT_SECRET_PREFIX = "/alpha/airflow/airflow_prod_laa/"
 
 
 class Settings(BaseSettings):
-    """Tries to read the value for each of these fields from the env var
-    with the same name, then if specified converts it to that type. If
-    there is no env var with that name set, applies the default value. If
-    not set and no default value specified, throws an error (these are not
-    optional and are required to be set via the DAG)"""
     
     AWS_REGION: str = "eu-west-1"
     MOJAP_EXTRACTION_TS: int

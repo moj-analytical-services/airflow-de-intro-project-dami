@@ -8,7 +8,6 @@ from scripts.run import run_data_pipeline
 
 # sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-
 if settings.TABLES:
     run_data_pipeline()
 else:

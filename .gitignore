@@ -106,3 +106,4 @@ venv.bak/
 
 # Others
 Archive/
+tests/
