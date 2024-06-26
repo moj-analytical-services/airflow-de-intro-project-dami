@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings
 
 
 
-LOCAL_DEV_MODE = True
+LOCAL_DEV_MODE = False
 DEFAULT_SECRET_PREFIX = "/alpha/airflow/airflow_prod_laa/"
 
 
@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     RAW_HIST_FOLDER: Optional[str] = None
     CURATED_FOLDER: Optional[str] = None
     METADATA_FOLDER: Optional[str] = None
+    LOGS_FOLDER: Optional[str] = None
 
     @model_validator(mode="before")
     def check_land_and_or_meta(cls, values):

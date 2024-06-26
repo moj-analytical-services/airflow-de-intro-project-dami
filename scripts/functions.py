@@ -20,17 +20,20 @@ from mojap_metadata.converters.glue_converter import (
 )
 from arrow_pd_parser import reader, writer
 
-from scripts.config import settings
-from scripts.utils import s3_path_join
+from config import settings
+from utils import s3_path_join
 from dataengineeringutils3.s3 import (
     get_filepaths_from_s3_folder,
 )
 
 
 # Set up logging
-logging.basicConfig(filename='data_pipeline.log', level=logging.DEBUG,
-                        format='%(asctime)s - %(levelname)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(
+    filename="data_pipeline.log", # f"{settings.LOGS_FOLDER}/data_pipeline.log",
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 def extract_data_to_s3():
     s3_path = settings.LANDING_FOLDER
@@ -104,20 +107,13 @@ def load_data_from_s3(
     return full_df
 
 
-def load_metadata_from_json(metadata_path: str) -> Metadata:
-    """Loads metadata from a JSON file."""
-    with open(metadata_path, "r") as f:
-        metadata_dict = json.load(f)
-    return Metadata.from_json(metadata_dict)
-
-
 def load_metadata() -> Metadata:
-    """Loads and initializes metadata for a specific table."""
-    metadata_path = s3_path_join(
+    metadata = s3_path_join(
         settings.METADATA_FOLDER, f"{settings.TABLES}.json"
-    )
-    metadata = load_metadata_from_json(metadata_path)
-    metadata.name = settings.TABLES  # Affirm Table name
+        )
+    metadata = Metadata.from_json(metadata)
+    # Affirm Table name
+    metadata.name = settings.TABLES
     return metadata
 
 
@@ -331,7 +327,7 @@ def create_glue_table(
     )
 
 
-def write_curated_table_to_s3(df: pd.DataFrame) -> None:
+def write_curated_table_to_s3(df: pd.DataFrame, metadata = load_metadata()) -> None:
     """Writes a curated DataFrame to S3 and updates/creates the corresponding Glue table."""
     db_dict: Dict[str, Union[str, None]] = {
         "name": "dami_intro_project",
@@ -340,7 +336,7 @@ def write_curated_table_to_s3(df: pd.DataFrame) -> None:
         "table_location": settings.CURATED_FOLDER,
     }
 
-    metadata = update_metadata()
+    metadata = update_metadata(metadata)
     gc = GlueConverter()
     glue_client = boto3.client("glue")
 
