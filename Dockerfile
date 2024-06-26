@@ -37,4 +37,4 @@ COPY . .
 RUN pip install -r requirements.txt
 
 
-ENTRYPOINT python -u main.py
+ENTRYPOINT python scripts/run.py

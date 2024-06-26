@@ -1,89 +1,409 @@
-def load_data_from_s3():
-    """
-    In this stage we need to load our dataset from an s3 bucket
-    and return it to the rest of the pipeline in the form of
-    a Pandas DataFrame.
-    Original data source: https://github.com/datablist/sample-csv-files
-    Source file: "people-100000.csv"
-    To do this we will utilise the read() method of an arrow_pd_parser
-    reader object, this method will require the path to the data
-    object on s3
-    Arrow PD Parser:
-    https://github.com/moj-analytical-services/mojap-arrow-pd-parser
-    """
+import os
+import logging
+
+import time
+from datetime import datetime
+
+import pandas as pd
+import awswrangler as wr
+import pyarrow.parquet as pq
+
+from typing import Dict, Optional, Union
+
+import boto3
+from botocore.exceptions import ClientError, BotoCoreError
+
+from urllib.parse import urlparse
+from mojap_metadata import Metadata
+from mojap_metadata.converters.glue_converter import (
+    GlueConverter,
+)
+from arrow_pd_parser import reader, writer
+
+from config import settings
+from utils import s3_path_join
+from dataengineeringutils3.s3 import (
+    get_filepaths_from_s3_folder,
+)
+
+
+# Set up logging
+logging.basicConfig(
+    filename="data_pipeline.log", # f"{settings.LOGS_FOLDER}/data_pipeline.log",
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+
+def extract_data_to_s3():
+    s3_path = settings.LANDING_FOLDER
+    base = os.path.join(os.getcwd(), 'data/example-data')
+    for root, _, files in os.walk(base):
+        for file in files:
+            if file.endswith('.parquet'):
+                file_path = os.path.join(root, file)
+                s3_file_path = os.path.join(s3_path, file)
+                wr.s3.upload(file_path, s3_file_path)
+                logging.info(f"Uploading {file} to {s3_path}")
+    logging.info("Extraction complete")
+    print("Source data extraction from Repo to landing folder complete")
+
+def create_s3_client():
+    """Creates and returns a boto3 S3 resource."""
+    return boto3.resource("s3")
+
+
+def list_parquet_files_in_s3(
+                            bucket_name: str,
+                            prefix: str,
+                            partitions: Optional[Dict[str, str]] = None,
+                        ) -> list:
+    """Lists Parquet files in an S3 path with optional partition filtering."""
+    s3 = create_s3_client()
+    bucket = s3.Bucket(bucket_name)
+    parquet_files = []
+    for obj in bucket.objects.filter(Prefix=prefix):
+        if obj.key.endswith(".parquet"):
+            if partitions and not any(
+                partition in obj.key
+                for partition in partitions
+            ):
+                continue
+            parquet_files.append(
+                f"s3://{bucket_name}/{obj.key}"
+            )
+    return parquet_files
+
+
+def read_parquet_file_to_dataframe(
+                                    parquet_file: str,
+                                ) -> pd.DataFrame:
+    """Reads a single Parquet file into a Pandas DataFrame."""
+    return (
+        pq.ParquetDataset(parquet_file).read().to_pandas()
+    )
+
+
+def load_data_from_s3(
+                    partitions: Optional[Dict[str, str]] = None
+                ) -> pd.DataFrame:
+    """Loads and concatenates Parquet data from S3."""
+    s3_path = settings.LANDING_FOLDER
+    bucket_name, prefix = (
+        (s3_path).replace("s3://", "").split("/", 1)
+    )
+
+    parquet_files = list_parquet_files_in_s3(
+        bucket_name, prefix, partitions
+    )
+
+    dfs = [
+        read_parquet_file_to_dataframe(file)
+        for file in parquet_files
+    ]
+
+    full_df = pd.concat(dfs, ignore_index=True)
+    print("Loading data from landing bucket ...")
+    return full_df
+
+
+def load_metadata() -> Metadata:
+    metadata = s3_path_join(
+        settings.METADATA_FOLDER, f"{settings.TABLES}.json"
+        )
+    metadata = Metadata.from_json(metadata)
+    # Affirm Table name
+    metadata.name = settings.TABLES
+    return metadata
+
+
+def get_new_columns_definition() -> list:
+    """Returns a list of new column definitions."""
+    return [
+        {
+            "name": "mojap_start_datetime",
+            "type": "timestamp(ms)",
+            "datetime_format": "%Y-%m-%dT%H:%M:%S",
+            "description": "extraction start date",
+        },
+        {
+            "name": "mojap_image_tag",
+            "type": "string",
+            "description": "image version",
+        },
+        {
+            "name": "mojap_raw_filename",
+            "type": "string",
+            "description": "",
+        },
+        {
+            "name": "mojap_task_timestamp",
+            "type": "timestamp(ms)",
+            "datetime_format": "%Y-%m-%dT%H:%M:%S",
+            "description": "",
+        },
+    ]
+
+
+def update_metadata(metadata: Metadata) -> Metadata:
+    """Updates metadata with new columns."""
+    new_columns = get_new_columns_definition()
+    for new_column in new_columns:
+        metadata.update_column(new_column)
+    return metadata
+
+
+def cast_column_to_type(
+                        df: pd.DataFrame,
+                        column_name: str,
+                        column_type: str,
+                        datetime_format: Optional[str] = None,
+                    ) -> pd.DataFrame:
+    """Casts a single column in a DataFrame to a specific type."""
+    if column_name not in df.columns:
+        if column_type == "timestamp(ms)":
+            df[column_name] = pd.NaT
+        elif column_type == "string":
+            df[column_name] = ""
+        else:
+            df[column_name] = pd.NA
+    if column_type == "timestamp(ms)":
+        df[column_name] = pd.to_datetime(
+            df[column_name],
+            format=(
+                datetime_format
+                if datetime_format
+                else "%Y-%m-%dT%H:%M:%S"
+            ),
+        )
+    else:
+        df[column_name] = df[column_name].astype(
+            column_type
+        )
     return df
 
 
-def cast_columns_to_correct_types(df):
-    """
-    In this stage we need to compare the data types of each column in our
-    pandas dataframe and ensure they match with the expected
-    types from the provided Mojap Metadata, casting types as required.
-    Mojap Metadata:
-    https://github.com/moj-analytical-services/mojap-metadata
-    """
+def cast_columns_to_correct_types(
+                                    df: pd.DataFrame,
+                                ) -> pd.DataFrame:
+    """Casts columns in a DataFrame to types defined in metadata."""
+    metadata = load_metadata()
+    metadata = update_metadata(metadata)
+
+    for column in metadata.columns:
+        df = cast_column_to_type(
+            df,
+            column["name"],
+            column["type"],
+            column.get("datetime_format"),
+        )
+
     return df
 
 
-def add_mojap_columns_to_dataframe(df):
-    """
-    In this stage we need to add a set of columns to the dataframe and
-    metadata which are derived from environment variables, this will allow
-    traceability for when entries were added, which version of the pipeline
-    was used.
-    To add entries to the Metadata we utilise the update_column() method of
-    the metadata object.
-    Once this is done, columns should be added to the dataframe ensuring the
-    correct data type is used.
-
-    The columns we will add are:
-    "mojap_start_datetime" - This is derived from the "Source extraction date"
-    column in the provided data. This will be used for scd2 in the future.
-    "mojap_image_tag" - This is the release version of the script being used
-    to produce the curated table. This value should be passed as an environment
-    variable from the Airflow Dag.
-    "mojap_raw_filename" - This is the name of the source file the data originated
-    in.
-    "mojap_task_timestamp" - This is the time the Airflow Task was initiated. This
-    should be passed as an environment variable from the Airflow Dag.
-    """
+def add_mojap_start_datetime_column(
+                                    df: pd.DataFrame,
+                                ) -> pd.DataFrame:
+    """Adds 'mojap_start_datetime' column based on 'Source extraction date'."""
+    df["mojap_start_datetime"] = pd.to_datetime(
+        df["Source extraction date"]
+    )
     return df
 
 
-def write_curated_table_to_s3(df):
-    """
-    Once all transformations on the dataframe are completed we need to write
-    the data to an appropriate s3 bucket written in .parquet format.
-    An Arrow PD Parser writer object can be used to acheive this.
-    The table should then be registered with the Glue Catalogue.
-    AWS Wrangler can be used to acheive this:
-    https://github.com/aws/aws-sdk-pandas
-    specifically the create_parquet_table method of the Catalogue module.
-    Before this, we will need to convert the metadata to an appropriate format
-    using a GlueConverter object from Mojap Metadata
-    """
-    return
+def add_static_mojap_columns(
+                            df: pd.DataFrame,
+                        ) -> pd.DataFrame:
+    """Adds static MOJAP columns to the DataFrame."""
+    df["mojap_image_tag"] = settings.MOJAP_IMAGE_VERSION
+    df["mojap_raw_filename"] = (
+        "people-100000.csv"  # Consider making this dynamic
+    )
+    df["mojap_task_timestamp"] = pd.to_datetime(
+        settings.MOJAP_EXTRACTION_TS, unit="s"
+    )
+    print("Transforming data ...")
+    return df
+
+
+def add_mojap_columns_to_dataframe(
+                                    df: pd.DataFrame,
+                                ) -> pd.DataFrame:
+    """Adds all MOJAP-specific columns to the DataFrame."""
+    df = add_mojap_start_datetime_column(df)
+    df = add_static_mojap_columns(df)
+    return df
+
+
+def create_glue_database(
+                            glue_client, db_dict: Dict[str, Union[str, None]]
+                        ) -> None:
+    """Creates a Glue database if it doesn't exist."""
+    try:
+        glue_client.get_database(Name=db_dict["name"])
+    except ClientError as e:
+        if (
+            e.response["Error"]["Code"]
+            == "EntityNotFoundException"
+        ):
+            db_meta = {
+                "DatabaseInput": {
+                    "Name": db_dict["name"],
+                    "Description": db_dict["description"],
+                }
+            }
+            glue_client.create_database(**db_meta)
+            logging.info(
+                "Created Glue database '%s'",
+                db_dict["name"],
+            )
+        else:
+            logging.error(
+                "Unexpected error while accessing database '%s': %s",
+                db_dict["name"],
+                e,
+            )
+
+
+def write_parquet_to_s3(
+                        df: pd.DataFrame, file_path: str, metadata: "Metadata"
+                    ) -> None:
+    """Writes a DataFrame to S3 as a Parquet file with metadata."""
+    writer.write(
+        df=df,
+        output_path=file_path,
+        metadata=metadata,
+        file_format="parquet",
+    )
+    logging.info("Parquet file written to '%s'", file_path)
+
+
+def delete_existing_glue_table(
+                                glue_client, db_name: str, table_name: str
+                            ) -> None:
+    """Deletes a Glue table if it exists."""
+    try:
+        glue_client.delete_table(
+            DatabaseName=db_name, Name=table_name
+        )
+        logging.info(
+            "Deleted existing table '%s' in database '%s'",
+            table_name,
+            db_name,
+        )
+        time.sleep(
+            5
+        )  # Allow time for deletion to propagate
+    except ClientError as e:
+        if (
+            e.response["Error"]["Code"]
+            != "EntityNotFoundException"
+        ):
+            logging.error(
+                "Failed to delete table '%s' in database '%s': %s",
+                table_name,
+                db_name,
+                e,
+            )
+
+
+def create_glue_table(
+                        glue_client,
+                        gc: "GlueConverter",
+                        metadata: "Metadata",
+                        db_dict: Dict[str, Union[str, None]],
+                    ) -> None:
+    """Creates (or overwrites) a Glue table."""
+    spec = gc.generate_from_meta(
+        metadata,
+        database_name=db_dict["name"],
+        table_location=db_dict["table_location"],
+    )
+    glue_client.create_table(**spec)
+    logging.info(
+        "Table '%s' created (or overwritten) in database '%s'",
+        db_dict["table_name"],
+        db_dict["name"],
+    )
+
+
+def write_curated_table_to_s3(df: pd.DataFrame, metadata = load_metadata()) -> None:
+    """Writes a curated DataFrame to S3 and updates/creates the corresponding Glue table."""
+    db_dict: Dict[str, Union[str, None]] = {
+        "name": "dami_intro_project",
+        "description": "database with data from people parquet",
+        "table_name": settings.TABLES,
+        "table_location": settings.CURATED_FOLDER,
+    }
+
+    metadata = update_metadata(metadata)
+    gc = GlueConverter()
+    glue_client = boto3.client("glue")
+
+    create_glue_database(glue_client, db_dict)
+
+    file_path = s3_path_join(
+        db_dict["table_location"],
+        f"{db_dict['table_name']}.parquet",
+    )
+    write_parquet_to_s3(df, file_path, metadata)
+
+    delete_existing_glue_table(
+        glue_client, db_dict["name"], db_dict["table_name"]
+    )
+    create_glue_table(glue_client, gc, metadata, db_dict)
+
+    logging.info(
+        "Data successfully written to s3 bucket and Athena Table created"
+    )
 
 
 def move_completed_files_to_raw_hist():
-    """
-    When all processing on a file has successfully completed and that data has
-    been written, that file should be moved from the Land folder to the
-    Raw Hist folder. This allows us to maintain a history of all data sources
-    over time, enabling rebuild of our databases in the case of errors being
-    identified.
-    """
-    return
+    """Moves completed files from the landing folder to the raw history folder."""
+    land_folder = settings.LANDING_FOLDER
+    raw_hist_folder = settings.RAW_HIST_FOLDER
 
-def apply_scd2():
-    """
-    The third data file "people-part3.parquet" contains updates to some entries
-    in the first two data files. To allow for 'rewinding' of the database to
-    an earlier state, important for reproduceability, we need to apply scd2
-    (slowly changing dimension Type 2 - 
-    https://en.wikipedia.org/wiki/Slowly_changing_dimension) based on the
-    mojap_start_datetime column.
-    The updated rows are for user ID 'e09c4f4cbfEFaFd',
-    'eda7EcaF87b2D80' and '9C4Df1246ddf543'
-    Further instructions TBC.
-    """
+    land_files = get_filepaths_from_s3_folder(
+        s3_folder_path=land_folder
+    )
+    if not land_files:
+        logging.info(
+            "No files to move into the landing folder - %s",
+            land_folder,
+        )
+        return
+
+    target_path = s3_path_join(
+        raw_hist_folder,
+        f"dag_run_ts_{settings.MOJAP_EXTRACTION_TS}",
+    )
+    logging.info(
+        "Target path for moved files: %s", target_path
+    )
+
+    try:
+        wr.s3.copy_objects(
+            paths=land_files,
+            source_path=land_folder,
+            target_path=target_path,
+        )
+        logging.info(
+            "Files successfully moved from the landing folder to the raw history folder."
+        )
+
+        wr.s3.delete_objects(path=land_files)
+        logging.info(
+            "Successfully deleted files in %s", land_folder
+        )
+
+        print(
+            (
+                "Raw data moved from Landing folder - Raw History"
+            )
+        )
+    except (BotoCoreError, ClientError) as error:
+        logging.error(
+            "Failed to move or delete files: %s", error
+        )
+    except Exception as e:
+        logging.error("An unexpected error occurred: %s", e)
