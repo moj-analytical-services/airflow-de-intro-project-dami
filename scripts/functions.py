@@ -36,8 +36,10 @@ logging.basicConfig(
 )
 
 def extract_data_to_s3():
+
     s3_path = settings.LANDING_FOLDER
     base = os.path.join(os.getcwd(), 'data/example-data')
+
     for root, _, files in os.walk(base):
         for file in files:
             if file.endswith('.parquet'):
@@ -45,6 +47,7 @@ def extract_data_to_s3():
                 s3_file_path = os.path.join(s3_path, file)
                 wr.s3.upload(file_path, s3_file_path)
                 logging.info(f"Uploading {file} to {s3_path}")
+
     logging.info("Extraction complete")
     print("Source data extraction from Repo to landing folder complete")
 
@@ -327,7 +330,7 @@ def create_glue_table(
     )
 
 
-def write_curated_table_to_s3(df: pd.DataFrame, metadata = load_metadata()) -> None:
+def write_curated_table_to_s3(df: pd.DataFrame, metadata=load_metadata()) -> None:
     """Writes a curated DataFrame to S3 and updates/creates the corresponding Glue table."""
     db_dict: Dict[str, Union[str, None]] = {
         "name": "dami_intro_project",
