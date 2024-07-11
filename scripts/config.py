@@ -2,14 +2,18 @@ import os
 import re
 from typing import List, Optional, Union
 
-from pydantic import field_validator, model_validator
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
+import argparse
 
 
-LOCAL_DEV_MODE = False
 DEFAULT_SECRET_PREFIX = "/alpha/airflow/airflow_prod_laa/"
 
+def create_parser():
+    parser = argparse.ArgumentParser(description="Run data pipeline.")
+    parser.add_argument("--env", nargs='?', default=None, const="dev", help="Environment to run in (dev, prod, etc.)")
+    return parser
 
 class Settings(BaseSettings):
     AWS_REGION: str = "eu-west-1"
@@ -51,10 +55,12 @@ class Settings(BaseSettings):
 
 
 print("Instantiating settings ...")
-if LOCAL_DEV_MODE:
+args = create_parser().parse_args()
+if args.env == "dev":
+    LOCAL_DEV_MODE = True 
     settings = Settings(_env_file="dev.env")
 else:
     settings = Settings()
-    
+   
 os.environ["AWS_REGION"] = settings.AWS_REGION
 os.environ["AWS_DEFAULT_REGION"] = settings.AWS_REGION

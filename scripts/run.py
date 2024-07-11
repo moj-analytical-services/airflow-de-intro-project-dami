@@ -23,23 +23,9 @@ def run_data_pipeline():
     write_curated_table_to_s3(df)
     move_completed_files_to_raw_hist()
 
-if __name__ == "__main__":
-    # Entry point for the script.
-    # This ensures that the data pipeline is only executed when the script is
-    # run directly (not imported as a module). The argparse module can be 
-    # used here to handle command-line arguments, allowing for greater
-    # flexibility in how the pipeline is executed.
-
-    parser = argparse.ArgumentParser(description="Run data pipeline.")
-
-    # Add arguments as needed, for example:
-    # parser.add_argument("--env", default="dev", help="Environment to run in (dev, prod, etc.)")
-    args = parser.parse_args()
-
-    # Move the data to Landing folder
-    extract_data_to_s3()
-
-    if settings.TABLES:
-        run_data_pipeline()
-    else:
-        print("Check the process")
+# [Optional] Moves data from directory to S3 landing bucket
+extract_data_to_s3()
+if settings.TABLES:
+    run_data_pipeline()
+else:
+    print("Check the process")

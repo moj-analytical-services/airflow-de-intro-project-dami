@@ -119,3 +119,19 @@ graph LR
     H --> I[Apply SCD2]
 
 ```
+
+To run this locally, create a `dev.env` file, providing the following parameters:
+```yaml
+LANDING_FOLDER=<landing_folder> for the raw files
+RAW_HIST_FOLDER=<raw_history>
+CURATED_FOLDER=<curated_folder>
+METADATA_FOLDER=<metadata_folder>
+MOJAP_EXTRACTION_TS=1704451200
+MOJAP_IMAGE_VERSION='v0.0.1'
+TABLES='peoples'
+```
+
+
+```python
+python scripts/run.py --env dev
+```
