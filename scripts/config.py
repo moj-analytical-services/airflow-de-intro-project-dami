@@ -1,21 +1,17 @@
 import os
 import re
+import dotenv
 from typing import List, Optional, Union
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
-import argparse
 
-
-DEFAULT_SECRET_PREFIX = "/alpha/airflow/airflow_prod_laa/"
-
-def create_parser():
-    parser = argparse.ArgumentParser(description="Run data pipeline.")
-    parser.add_argument("--env", nargs='?', default=None, const="dev", help="Environment to run in (dev, prod, etc.)")
-    return parser
+dotenv.load_dotenv(dotenv_path="dev.env")
+TEST_MODE = os.getenv("TEST_MODE", False)
 
 class Settings(BaseSettings):
+    TEST_MODE: Optional[str]
     AWS_REGION: str = "eu-west-1"
     MOJAP_EXTRACTION_TS: int
     MOJAP_IMAGE_VERSION: str
@@ -55,9 +51,7 @@ class Settings(BaseSettings):
 
 
 print("Instantiating settings ...")
-args = create_parser().parse_args()
-if args.env == "dev":
-    LOCAL_DEV_MODE = True 
+if TEST_MODE: 
     settings = Settings(_env_file="dev.env")
 else:
     settings = Settings()
