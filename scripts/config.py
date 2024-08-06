@@ -1,4 +1,3 @@
-import os
 import re
 # import dotenv
 from typing import List, Optional, Union
@@ -13,11 +12,11 @@ class Settings(BaseSettings):
 
     TABLES: Optional[Union[str, List[str]]] = None
 
-    LANDING_FOLDER: Optional[str] = None
-    RAW_HIST_FOLDER: Optional[str] = None
-    CURATED_FOLDER: Optional[str] = None
-    METADATA_FOLDER: Optional[str] = None
-    LOG_FOLDER: Optional[str] = 'logs' # None
+    LANDING_FOLDER: Optional[str] 
+    RAW_HIST_FOLDER: Optional[str] 
+    CURATED_FOLDER: Optional[str] 
+    METADATA_FOLDER: Optional[str] 
+    LOG_FOLDER: Optional[str]
 
     # New fields
     LOG_FILE: Optional[str] = None

@@ -1,9 +1,6 @@
 import logging
 import os
 import pytest
-import uuid
-from pathlib import Path
-from logging.handlers import RotatingFileHandler
 from scripts.functions import setup_logging  # Import the setup_logging function from your module
 
 

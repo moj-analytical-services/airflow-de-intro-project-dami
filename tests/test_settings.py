@@ -4,7 +4,6 @@ correctly converted into a pydantic Settings object, including conformance
 to the validations specified in config.py
 """
 import os
-import pytest
 
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

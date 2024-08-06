@@ -1,10 +1,8 @@
-import os
 import pytest
 import pandas as pd
 import boto3
 import logging
 from moto import mock_aws
-from botocore.exceptions import ClientError
 from mojap_metadata import Metadata
 
 from scripts.utils import s3_path_join
