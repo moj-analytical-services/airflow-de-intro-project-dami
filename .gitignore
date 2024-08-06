@@ -107,5 +107,5 @@ venv.bak/
 
 # Others
 Archive/
-docs/
 logs/
+docs.DS_Store
