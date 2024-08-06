@@ -1,112 +1,110 @@
----
+# Data Pipeline Project
 
-# Airflow & Python Example Pipeline Guide
+This repository demonstrates a data pipeline using Airflow, Python, Docker, and MoJ's own Python modules. The pipeline performs various tasks including loading data from an S3 bucket, casting columns to correct types, adding metadata columns, writing curated tables to S3, and moving completed files to a raw history folder.
 
-This repository contains an example pipeline demonstrating how to create a data pipeline using Airflow, Python, Docker and MoJ's own Python modules. The pipeline performs various tasks including loading data from an S3 bucket, casting columns to correct types, adding metadata columns, writing curated tables to S3, moving completed files to a raw hist folder, and applying slowly changing dimension type 2 (SCD2) transformations.
+## Repository Structure
 
----
+```gherkin
+|-- data
+|-- scripts
+| |-- utils.py
+| |-- functions.py
+| |-- config.py
+| |-- run.py
+|-- tests
+|-- requirements.txt
+```
+## Features
 
-### Fork Repository
+- **Loading Data**: Extract data from a local directory and upload it to an S3 bucket.
+- **Data Transformation**: Cast columns to correct types and add metadata columns.
+- **Data Storage**: Write curated tables to S3.
+- **Data Archiving**: Move completed files to a raw history folder.
 
-1. Navigate to the [airflow-de-intro-project](https://github.com/moj-analytical-services/airflow-de-intro-project) repository on GitHub.com.
-2. Click **Fork** in the top-right corner.
-3. Select the owner (moj-analytical-services) for the forked repository.
-4. Rename the forked repository as `airflow-de-intro-project-{username}`.
-5. Optionally, provide a description for your fork.
-6. Click **Create fork**.
+## Prerequisites
 
----
+- Python 3.8 or higher
+- Docker
 
-## Set Up and Install Docker
+## Installation
 
-Docker is used to containerize the pipeline. Follow these steps to set up and install Docker:
-
-1. **Install Docker Desktop**: If you're using a MacBook, download and install Docker Desktop from [here](https://docs.docker.com/desktop/install/mac-install/).
-
-## Testing Docker Image
-
-Follow these steps to build and test your Docker image locally:
-
-1. **Clone Repository**: Clone the Airflow repository to your local machine.
-
-2. **Navigate to Directory**: Open a terminal session and navigate to the directory containing the Dockerfile using the `cd` command.
-
-3. **Build Docker Image**: Build the Docker image by running:
-   ```
-   docker build . -t IMAGE:TAG
-   ```
-   Replace `IMAGE` with a name for the image (e.g., `my-docker-image`) and `TAG` with the version number (e.g., `v0.1`).
-
-4. **Run Docker Container**: Run a Docker container created from the Docker image by running:
-   ```
-   docker run IMAGE:TAG
-   ```
-   This will execute the command specified in the Dockerfile's CMD line.
-
-5. **Pass Environment Variables**: If your command requires access to resources on the Analytical Platform, such as data stored in Amazon S3, pass the necessary environment variables to the Docker container. Example:
-   ```
-   docker run \
-       --env AWS_REGION=$AWS_REGION \
-       --env AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION \
-       --env AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-       --env AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-       --env AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN \
-       --env AWS_SECURITY_TOKEN=$AWS_SECURITY_TOKEN \
-       IMAGE:TAG
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/moj-analytical-services/airflow-de-intro-project-dami
+   cd airflow-de-intro-project-dami
    ```
 
-6. **Debugging**: For debugging and troubleshooting purposes, start a bash session in a running Docker container by running:
-   ```
-   docker run -it IMAGE:TAG bash
-   ```
+2. Install the required Python packages:
+```bash
+pip install -r requirements.txt
+```
 
-## Pipeline Tasks
+## Configuration
 
-### Load Data from S3
+### Environment Variables
+The pipeline uses environment variables for configuration. You can set these in a .env file for local development or directly in your DAG environment for production.
 
-- Load dataset from an S3 bucket and return it as a Pandas DataFrame. 
-- Three parquet files, representing extractions from a source database, are found in data/example-data/ in this repository, with mojap metadata found in data/metadata/. These have been adapted from [sample-csv-files](https://github.com/datablist/sample-csv-files) "people-100000.csv".
-- Utilize the `read()` method of an `arrow_pd_parser` reader object.
-- [Arrow PD Parser](https://github.com/moj-analytical-services/mojap-arrow-pd-parser).
+Example `.env` file for development (`dev.env`)
+```xml
+AWS_REGION=your-aws-region
+MOJAP_EXTRACTION_TS=your-extraction-timestamp
+MOJAP_IMAGE_VERSION=your-image-version
+TABLES=your-tables
+LANDING_FOLDER=your-landing-folder
+RAW_HIST_FOLDER=your-raw-hist-folder
+CURATED_FOLDER=your-curated-folder
+METADATA_FOLDER=your-metadata-folder
+LOG_FOLDER=your-log-folder
+DB_NAME=your-db-name
+DB_DESCRIPTION=your-db-description
+LOCAL_BASE_PATH=your-local-base-path
+```
 
-### Cast Columns to Correct Types
+## Running the Pipeline
+### Development Environment
+To run the pipeline in the development environment, use the following command:
 
-- Compare data types of each column in the DataFrame and ensure they match with the expected types from the provided Mojap Metadata.
-- [Mojap Metadata](https://github.com/moj-analytical-services/mojap-metadata).
+```bash
+python scripts/run.py --env dev
+```
+This will load the settings from the `dev.env` file.
 
-### Add Mojap Columns to DataFrame
+### Production Environment
+To run the pipeline in the production environment, use the following command:
+```bash
+python scripts/run.py
+```
+This will load the settings from the environment variables.
 
-- Add a set of columns to the DataFrame and metadata derived from environment variables for traceability.
-- Columns to add:
-  - "mojap_start_datetime"
-  - "mojap_image_tag"
-  - "mojap_raw_filename"
-  - "mojap_task_timestamp"
+## Usage
+The main script for running the data pipeline is `scripts/run.py`. It supports the following command-line arguments:
+- `--env`: Specify the environment (`dev` or `prod`). Default is `prod`.
+### Example Usage
+```bash
+python scripts/run.py --env dev
+```
 
-### Write Curated Table to S3
+## Logging
+Logs are stored in the directory specified by the `LOG_FOLDER` environment variable. The log file is named `data_pipeline.log`.
 
-- Write transformed data to an appropriate S3 bucket in .parquet format.
-- Register the table with the Glue Catalogue.
-- Utilize AWS Wrangler for this task.
+##  Error Handling
+The pipeline includes error handling to log any exceptions that occur during execution. If an error occurs, the pipeline will log the error and exit with a non-zero status code.
 
-### Move Completed Files to Raw Hist
+## Contributing
+Contributions are welcome! Please follow these steps to contribute:
+1. Fork the repository.
+2. Create a new branch for your feature or bugfix.
+3. Commit your changes with a descriptive commit message.
+4. Push your changes to your fork.
+5. Create a pull request to the main repository.
 
-- Move processed files from the Land folder to the Raw Hist folder for maintaining a history of data sources over time.
+## License
+This project is licensed under the MIT License. See the LICENSE file for details.
 
-### Apply SCD2
+## Contact
+For any questions or issues, please open an issue on GitHub or contact the DMET.
 
-- Apply slowly changing dimension Type 2 (SCD2) transformations based on the mojap_start_datetime column to handle updates to data entries.
-- Further instructions to be provided.
-
----
-
-Follow these steps to complete the tasks outlined in the pipeline.
-
-### Example Python Functions
-
-Use the provided Python functions as a guide to implement each stage of the pipeline in your environment.
-
----
+ This README.md provides a comprehensive overview of your project, including installation instructions, configuration details, usage examples, and contribution guidelines. Feel free to customize it further to better suit your project's needs.
 
 ```mermaid
 graph LR
