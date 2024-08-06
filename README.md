@@ -103,33 +103,3 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## Contact
 For any questions or issues, please open an issue on GitHub or contact the DMET.
-
- This README.md provides a comprehensive overview of your project, including installation instructions, configuration details, usage examples, and contribution guidelines. Feel free to customize it further to better suit your project's needs.
-
-```mermaid
-graph LR
-    B[Fork Repository] --> C[Set Up and Install Docker]
-    C --> D[Load Data from S3]
-    D --> E[Cast Columns to Correct Types]
-    E --> F[Add Mojap Columns to DataFrame]
-    F --> G[Write Curated Table to S3]
-    G --> H[Move Completed Files to Raw Hist]
-    H --> I[Apply SCD2]
-
-```
-
-To run this locally, create a `dev.env` file, providing the following parameters:
-```yaml
-LANDING_FOLDER=<landing_folder> for the raw files
-RAW_HIST_FOLDER=<raw_history>
-CURATED_FOLDER=<curated_folder>
-METADATA_FOLDER=<metadata_folder>
-MOJAP_EXTRACTION_TS=1704451200
-MOJAP_IMAGE_VERSION='v0.0.1'
-TABLES='peoples'
-```
-
-
-```python
-python scripts/run.py --env dev
-```
