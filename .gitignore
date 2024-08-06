@@ -71,7 +71,8 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-notebook/
+*.ipynb
+/notebook/
 
 # pyenv
 .python-version
@@ -83,7 +84,7 @@ celerybeat-schedule
 *.sage.py
 
 # Environments
-.env
+*.env
 .venv
 env/
 venv/
@@ -106,5 +107,5 @@ venv.bak/
 
 # Others
 Archive/
-notebook/
+docs/
 logs/
