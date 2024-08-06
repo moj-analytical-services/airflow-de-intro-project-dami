@@ -1,19 +1,14 @@
 import os
 import re
-import dotenv
+# import dotenv
 from typing import List, Optional, Union
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
-
-dotenv.load_dotenv(dotenv_path="dev.env")
-TEST_MODE = os.getenv("TEST_MODE", False)
-
 class Settings(BaseSettings):
-    TEST_MODE: Optional[str]
     AWS_REGION: str = "eu-west-1"
-    MOJAP_EXTRACTION_TS: int
+    MOJAP_EXTRACTION_TS: int 
     MOJAP_IMAGE_VERSION: str
 
     TABLES: Optional[Union[str, List[str]]] = None
@@ -22,6 +17,13 @@ class Settings(BaseSettings):
     RAW_HIST_FOLDER: Optional[str] = None
     CURATED_FOLDER: Optional[str] = None
     METADATA_FOLDER: Optional[str] = None
+    LOG_FOLDER: Optional[str] = 'logs' # None
+
+    # New fields
+    LOG_FILE: Optional[str] = None
+    LOCAL_BASE_PATH: Optional[str] = "data/example-data"
+    DB_NAME: Optional[str]  = "dami_intro_project"
+    DB_DESCRIPTION: Optional[str] = "database with data from people parquet"
 
 
     @model_validator(mode="before")
@@ -51,10 +53,3 @@ class Settings(BaseSettings):
 
 
 print("Instantiating settings ...")
-if TEST_MODE: 
-    settings = Settings(_env_file="dev.env")
-else:
-    settings = Settings()
-   
-os.environ["AWS_REGION"] = settings.AWS_REGION
-os.environ["AWS_DEFAULT_REGION"] = settings.AWS_REGION

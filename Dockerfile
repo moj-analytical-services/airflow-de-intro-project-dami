@@ -18,10 +18,9 @@ WORKDIR /etl
 # Ensures necessary permissions available to user in docker image
 RUN chmod -R 777 .
 
-COPY requirements.txt .
+COPY . .
+
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
 
 ENTRYPOINT python scripts/run.py

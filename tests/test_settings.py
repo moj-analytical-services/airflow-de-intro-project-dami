@@ -10,7 +10,6 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 example_env_vars = {
-    "TEST_MODE":"True",
     "AWS_REGION": "eu-west-1",
     "MOJAP_EXTRACTION_TS": "1689866369",
     "MOJAP_IMAGE_VERSION": "v0.0.0",
@@ -19,10 +18,14 @@ example_env_vars = {
     "CURATED_FOLDER": "s3://a-bucket/a-curated-folder/",
     "RAW_HIST_FOLDER": "s3://a-bucket/a-raw-hist-folder/",
     "METADATA_FOLDER": "s3://a-bucket/a-metadata-folder/",
+    "LOG_FOLDER":"s3://a-bucket/a-log-folder/",
+    "LOG_FILE":"logs",
+    "LOCAL_BASE_PATH":"data/example-data",
+    "DB_NAME":"dami_intro_project",
+    "DB_DESCRIPTION": "database with data from people parquet"
 }
 
 example_correct_settings = {
-    "TEST_MODE":"True",
     "AWS_REGION": "eu-west-1",
     "MOJAP_EXTRACTION_TS": 1689866369,
     "MOJAP_IMAGE_VERSION": "v0.0.0",
@@ -31,6 +34,11 @@ example_correct_settings = {
     "CURATED_FOLDER": "s3://a-bucket/a-curated-folder/",
     "RAW_HIST_FOLDER": "s3://a-bucket/a-raw-hist-folder/",
     "METADATA_FOLDER": "s3://a-bucket/a-metadata-folder/",
+    "LOG_FOLDER": "s3://a-bucket/a-log-folder/",
+    "LOG_FILE":"logs",
+    "LOCAL_BASE_PATH":"data/example-data",
+    "DB_NAME":"dami_intro_project",
+    "DB_DESCRIPTION": "database with data from people parquet"
 }
 
 

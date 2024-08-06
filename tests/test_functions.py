@@ -2,6 +2,7 @@ import os
 import pytest
 import pandas as pd
 import boto3
+import logging
 from moto import mock_aws
 from botocore.exceptions import ClientError
 from mojap_metadata import Metadata
@@ -53,11 +54,17 @@ def sample_metadata():
         ],
     )
 
+@pytest.fixture
+def test_logger():
+    logger = logging.getLogger('test_logger')
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(logging.NullHandler())
+    return logger
 
-# def test_setup_logging(tmp_path):
-#     log_file = tmp_path / "test.log"
-#     setup_logging(str(log_file))
-#     assert log_file.exists()
+def test_setup_logging(tmp_path):
+    log_file = tmp_path / "test.log"
+    setup_logging(str(log_file))
+    assert log_file.exists()
 
 
 @mock_aws
@@ -110,8 +117,8 @@ def test_load_metadata(tmp_path):
     assert len(result.columns) == 1
 
 
-def test_update_metadata(sample_metadata):
-    updated_metadata = update_metadata(sample_metadata)
+def test_update_metadata(sample_metadata, test_logger):
+    updated_metadata = update_metadata(sample_metadata, test_logger)
     new_column_names = [
         col["name"] for col in get_new_columns_definition()
     ]
@@ -151,9 +158,9 @@ def test_cast_columns_to_correct_types(
     )
 
 
-def test_add_mojap_columns_to_dataframe(sample_dataframe):
+def test_add_mojap_columns_to_dataframe(sample_dataframe, test_logger):
     result = add_mojap_columns_to_dataframe(
-        sample_dataframe, "v1.0", 1625097600
+        sample_dataframe, "v1.0", 1625097600, test_logger
     )
     assert "mojap_start_datetime" in result.columns
     assert "mojap_image_tag" in result.columns
@@ -162,7 +169,7 @@ def test_add_mojap_columns_to_dataframe(sample_dataframe):
 
 
 @mock_aws
-def test_create_glue_database():
+def test_create_glue_database(test_logger):
     glue_client = boto3.client(
         "glue", region_name="us-east-1"
     )
@@ -170,7 +177,7 @@ def test_create_glue_database():
         "name": "test_db",
         "description": "Test database",
     }
-    create_glue_database(glue_client, db_dict)
+    create_glue_database(glue_client, db_dict, test_logger)
 
     # Check if the database was created
     response = glue_client.get_database(Name="test_db")
@@ -182,7 +189,7 @@ def test_create_glue_database():
 
 
 @mock_aws
-def test_create_glue_database_already_exists():
+def test_create_glue_database_already_exists(test_logger):
     glue_client = boto3.client(
         "glue", region_name="us-east-1"
     )
@@ -195,5 +202,5 @@ def test_create_glue_database_already_exists():
         DatabaseInput={"Name": "test_db"}
     )
     # Try to create it again
-    create_glue_database(glue_client, db_dict)
+    create_glue_database(glue_client, db_dict, test_logger)
     # If no exception is raised, the test passes

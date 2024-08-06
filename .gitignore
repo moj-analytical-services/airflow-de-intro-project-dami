@@ -107,3 +107,4 @@ venv.bak/
 # Others
 Archive/
 notebook/
+logs/
