@@ -1,14 +1,13 @@
+from pathlib import Path
 import pytest
 import pandas as pd
 import boto3
-import logging
 from moto import mock_aws
 from mojap_metadata import Metadata
 
 from scripts.utils import s3_path_join
 
 from scripts.functions import (
-    setup_logging,
     list_parquet_files_in_s3,
     read_parquet_file_to_dataframe,
     get_new_columns_definition,
@@ -18,7 +17,8 @@ from scripts.functions import (
     cast_columns_to_correct_types,
     add_mojap_columns_to_dataframe,
     create_glue_database,
-)
+    )
+
 
 @pytest.fixture
 def sample_dataframe():
@@ -52,18 +52,6 @@ def sample_metadata():
         ],
     )
 
-@pytest.fixture
-def test_logger():
-    logger = logging.getLogger('test_logger')
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(logging.NullHandler())
-    return logger
-
-def test_setup_logging(tmp_path):
-    log_file = tmp_path / "test.log"
-    setup_logging(str(log_file))
-    assert log_file.exists()
-
 
 @mock_aws
 def test_list_parquet_files_in_s3():
@@ -89,7 +77,7 @@ def test_list_parquet_files_in_s3():
     assert all(file.endswith(".parquet") for file in files)
 
 
-def test_read_parquet_file_to_dataframe(tmp_path):
+def test_read_parquet_file_to_dataframe(tmp_path: Path):
     df = pd.DataFrame(
         {"col1": [1, 2, 3], "col2": ["a", "b", "c"]}
     )
@@ -102,8 +90,8 @@ def test_read_parquet_file_to_dataframe(tmp_path):
     pd.testing.assert_frame_equal(result, df)
 
 
-def test_load_metadata(tmp_path):
-    metadata_content = '{"name": "test_table", "columns": [{"name": "id", "type": "int64"}]}'
+def test_load_metadata(tmp_path: Path):
+    metadata_content = '{"name": "test_table", "columns": [{"name": "id", "type": "int64"}]}' # noqa
     metadata_file = s3_path_join(
         tmp_path / "test_table.json"
     )
@@ -115,8 +103,8 @@ def test_load_metadata(tmp_path):
     assert len(result.columns) == 1
 
 
-def test_update_metadata(sample_metadata, test_logger):
-    updated_metadata = update_metadata(sample_metadata, test_logger)
+def test_update_metadata(sample_metadata: Metadata):
+    updated_metadata = update_metadata(sample_metadata)
     new_column_names = [
         col["name"] for col in get_new_columns_definition()
     ]
@@ -126,7 +114,7 @@ def test_update_metadata(sample_metadata, test_logger):
     )
 
 
-def test_cast_column_to_type(sample_dataframe):
+def test_cast_column_to_type(sample_dataframe: pd.DataFrame):
     result = cast_column_to_type(
         sample_dataframe, "id", "int64"
     )
@@ -144,7 +132,7 @@ def test_cast_column_to_type(sample_dataframe):
 
 
 def test_cast_columns_to_correct_types(
-    sample_dataframe, sample_metadata
+    sample_dataframe: pd.DataFrame, sample_metadata: Metadata
 ):
     result = cast_columns_to_correct_types(
         sample_dataframe, sample_metadata
@@ -156,9 +144,9 @@ def test_cast_columns_to_correct_types(
     )
 
 
-def test_add_mojap_columns_to_dataframe(sample_dataframe, test_logger):
+def test_add_mojap_columns_to_dataframe(sample_dataframe: pd.DataFrame):
     result = add_mojap_columns_to_dataframe(
-        sample_dataframe, "v1.0", 1625097600, test_logger
+        sample_dataframe, "v1.0", 1625097600
     )
     assert "mojap_start_datetime" in result.columns
     assert "mojap_image_tag" in result.columns
@@ -167,15 +155,15 @@ def test_add_mojap_columns_to_dataframe(sample_dataframe, test_logger):
 
 
 @mock_aws
-def test_create_glue_database(test_logger):
+def test_create_glue_database():
     glue_client = boto3.client(
-        "glue", region_name="us-east-1"
+        "glue", region_name="eu-west-1"
     )
     db_dict = {
         "name": "test_db",
         "description": "Test database",
     }
-    create_glue_database(glue_client, db_dict, test_logger)
+    create_glue_database(glue_client, db_dict)
 
     # Check if the database was created
     response = glue_client.get_database(Name="test_db")
@@ -187,9 +175,9 @@ def test_create_glue_database(test_logger):
 
 
 @mock_aws
-def test_create_glue_database_already_exists(test_logger):
+def test_create_glue_database_already_exists():
     glue_client = boto3.client(
-        "glue", region_name="us-east-1"
+        "glue", region_name="eu-west-1"
     )
     db_dict = {
         "name": "test_db",
@@ -200,5 +188,4 @@ def test_create_glue_database_already_exists(test_logger):
         DatabaseInput={"Name": "test_db"}
     )
     # Try to create it again
-    create_glue_database(glue_client, db_dict, test_logger)
-    # If no exception is raised, the test passes
+    create_glue_database(glue_client, db_dict)

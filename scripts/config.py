@@ -5,25 +5,22 @@ from typing import List, Optional, Union
 from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     AWS_REGION: str = "eu-west-1"
-    MOJAP_EXTRACTION_TS: int 
+    MOJAP_EXTRACTION_TS: int
     MOJAP_IMAGE_VERSION: str
 
     TABLES: Optional[Union[str, List[str]]] = None
-
-    LANDING_FOLDER: Optional[str] 
-    RAW_HIST_FOLDER: Optional[str] 
-    CURATED_FOLDER: Optional[str] 
-    METADATA_FOLDER: Optional[str] 
-    LOG_FOLDER: Optional[str]
+    LANDING_FOLDER: Optional[str]
+    RAW_HIST_FOLDER: Optional[str]
+    CURATED_FOLDER: Optional[str]
+    METADATA_FOLDER: Optional[str]
 
     # New fields
-    LOG_FILE: Optional[str] = None
     LOCAL_BASE_PATH: Optional[str] = "data/example-data"
-    DB_NAME: Optional[str]  = "dami_intro_project"
+    DB_NAME: Optional[str] = "dami_intro_project"
     DB_DESCRIPTION: Optional[str] = "database with data from people parquet"
-
 
     @model_validator(mode="before")
     def check_land_and_or_meta(cls, values):
