@@ -1,5 +1,4 @@
 import argparse
-import logging
 import os
 import sys
 
@@ -11,10 +10,13 @@ from functions import (
     load_data_from_s3,
     load_metadata,
     move_completed_files_to_raw_hist,
-    setup_logging,
     update_metadata,
     write_curated_table_to_s3,
 )
+
+from dataengineeringutils3.logging import get_logger
+
+logger, _ = get_logger()
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -44,7 +46,7 @@ def setup_environment(settings: Settings) -> None:
     os.environ["AWS_DEFAULT_REGION"] = settings.AWS_REGION
 
 
-def main(settings: Settings, logger: logging.Logger) -> None:
+def main(settings: Settings) -> None:
     """
     Main function encapsulating the entire data processing pipeline.
 
@@ -55,16 +57,16 @@ def main(settings: Settings, logger: logging.Logger) -> None:
     try:
         if settings.LANDING_FOLDER:
             extract_data_to_s3(
-                settings.LANDING_FOLDER, settings.LOCAL_BASE_PATH, logger
+                settings.LANDING_FOLDER, settings.LOCAL_BASE_PATH
             )
 
         if settings.TABLES:
-            df = load_data_from_s3(settings.LANDING_FOLDER, logger)
+            df = load_data_from_s3(settings.LANDING_FOLDER)
             metadata = load_metadata(settings.METADATA_FOLDER, settings.TABLES)
-            metadata = update_metadata(metadata, logger)
+            metadata = update_metadata(metadata)
             df = cast_columns_to_correct_types(df, metadata)
             df = add_mojap_columns_to_dataframe(
-                df, settings.MOJAP_IMAGE_VERSION, settings.MOJAP_EXTRACTION_TS, logger
+                df, settings.MOJAP_IMAGE_VERSION, settings.MOJAP_EXTRACTION_TS
             )
 
             db_dict = {
@@ -74,18 +76,17 @@ def main(settings: Settings, logger: logging.Logger) -> None:
                 "table_location": settings.CURATED_FOLDER,
             }
 
-            write_curated_table_to_s3(df, metadata, db_dict, logger)
+            write_curated_table_to_s3(df, metadata, db_dict)
 
             move_completed_files_to_raw_hist(
                 settings.LANDING_FOLDER,
                 settings.RAW_HIST_FOLDER,
-                settings.MOJAP_EXTRACTION_TS,
-                logger,
+                settings.MOJAP_EXTRACTION_TS
             )
 
         logger.info("Data processing pipeline completed successfully.")
     except Exception as e:
-        logger.exception(
+        logger.error(
             f"An error occurred during the data processing pipeline: {str(e)}"
         )
         sys.exit(1)
@@ -98,13 +99,13 @@ if __name__ == "__main__":
         settings = load_settings(args.env)
         setup_environment(settings)
 
-        log_file = os.path.join(settings.LOG_FOLDER, "data_pipeline.log")
-        logger = setup_logging(log_file)
+        # log_file = os.path.join(settings.LOG_FOLDER, "data_pipeline.log")
+        # logger = setup_logging(log_file)
 
-        logger.info(f"Starting data processing pipeline in {args.env} environment.")
+        logger.info(f"Starting data processing pipeline in {args.env} environment.")  # noqa
 
-        main(settings, logger)
+        main(settings)
 
     except Exception as e:
-        print(f"An unexpected error occurred: {str(e)}", file=sys.stderr)
+        logger.error(f"An unexpected error occurred: {str(e)}")
         sys.exit(1)

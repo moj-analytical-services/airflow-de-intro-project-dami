@@ -17,10 +17,8 @@ example_env_vars = {
     "CURATED_FOLDER": "s3://a-bucket/a-curated-folder/",
     "RAW_HIST_FOLDER": "s3://a-bucket/a-raw-hist-folder/",
     "METADATA_FOLDER": "s3://a-bucket/a-metadata-folder/",
-    "LOG_FOLDER":"s3://a-bucket/a-log-folder/",
-    "LOG_FILE":"logs",
-    "LOCAL_BASE_PATH":"data/example-data",
-    "DB_NAME":"dami_intro_project",
+    "LOCAL_BASE_PATH": "data/example-data",
+    "DB_NAME": "dami_intro_project",
     "DB_DESCRIPTION": "database with data from people parquet"
 }
 
@@ -33,10 +31,8 @@ example_correct_settings = {
     "CURATED_FOLDER": "s3://a-bucket/a-curated-folder/",
     "RAW_HIST_FOLDER": "s3://a-bucket/a-raw-hist-folder/",
     "METADATA_FOLDER": "s3://a-bucket/a-metadata-folder/",
-    "LOG_FOLDER": "s3://a-bucket/a-log-folder/",
-    "LOG_FILE":"logs",
-    "LOCAL_BASE_PATH":"data/example-data",
-    "DB_NAME":"dami_intro_project",
+    "LOCAL_BASE_PATH": "data/example-data",
+    "DB_NAME": "dami_intro_project",
     "DB_DESCRIPTION": "database with data from people parquet"
 }
 
@@ -46,10 +42,12 @@ def set_example_settings():
         try:
             del os.environ[setting]
         except KeyError as error_str:
-            print(f"Tidying up example settings. No env var '{error_str}' to delete")
+            print(f"Tidying up example settings.\
+                  No env var '{error_str}' to delete")
     # os.environ.clear()
     for setting in example_env_vars:
         os.environ[setting] = example_env_vars[setting]
+
 
 def test_example_settings_with_tables():
     set_example_settings()
@@ -58,5 +56,4 @@ def test_example_settings_with_tables():
     # Remove one of TABLE_PREFIX and TABLES, can't have both set
     this_example["TABLES"] = None
     del os.environ["TABLES"]
-    
     assert Settings().model_dump() == this_example

@@ -4,9 +4,11 @@ on:
     types: [published]
     tags:
       - "v*.*.*"
+
 permissions:
   id-token: write
   contents: read
+
 jobs:
   build-tag-push:
     name: Build, tag, and push image to Amazon ECR
