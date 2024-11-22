@@ -100,7 +100,7 @@ sql_metadata==2.10.0
 sqlparse==0.4.4
 stack-data==0.6.3
 tomli==2.0.1
-tornado==6.4.1
+tornado==6.4.2
 traitlets==5.14.2
 typing_extensions==4.10.0
 urllib3==1.26.19
